@@ -11,5 +11,12 @@ class Kiwoom(QAxWidget):
         self.event_slots()
         self.signal_login_commConnect()
         
-        def event_slots(self):
-            self.OnEventConnect.connect(self.login_slot) # 로그인 관련 이벤트
+        self.login_event_loop = QEventLoop() # 로그인 요청용 이벤트 루프
+        
+    def event_slots(self):
+        self.OnEventConnect.connect(self.login_slot) # 로그인 관련 이벤트
+        
+    def login_slot(self, err_code):
+        print(errors(err_code)[1])
+        
+        self.login_event_loop.exit()
