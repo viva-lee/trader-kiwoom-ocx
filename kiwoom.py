@@ -12,4 +12,4 @@ class Kiwoom(QAxWidget):
         self.signal_login_commConnect()
         
         def event_slots(self):
-            self.OnEventConnect.connect(self.login_slot)
+            self.OnEventConnect.connect(self.login_slot) # 로그인 관련 이벤트
