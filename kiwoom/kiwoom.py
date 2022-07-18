@@ -41,5 +41,4 @@ class Kiwoom(QAxWidget):
         account_num = account_list.split(";")[0]
         
         self.account_num = account_num
-        
         print("계좌번호 : %s" % account_num)
