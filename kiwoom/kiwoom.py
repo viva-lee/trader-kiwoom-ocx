@@ -17,6 +17,7 @@ class Kiwoom(QAxWidget):
         self.get_ocx_instance() # ocx 방식을 파이썬이 사용할 수 있게 변환해 주는 함수
         self.event_slots() # 키움과 연결하기 위한 시그널/슬롯 모음
         self.signal_login_commConnect() # 로그인 요청 함수
+        self.get_account_info() # 계좌번호 가져오기
         ################################
         
     def get_ocx_instance(self):
@@ -34,3 +35,11 @@ class Kiwoom(QAxWidget):
         print(errors(err_code)[1])
         
         self.login_event_loop.exit() # 로그인 처리 완료 시 이벤트 루프 종료
+        
+    def get_account_info(self):
+        account_list = self.dynamicCall("GetLoginInfo(QString)", "ACCNO") # 계좌번호 반환
+        account_num = account_list.split(";")[0]
+        
+        self.account_num = account_num
+        
+        print("계좌번호 : %s" % account_num)
