@@ -10,6 +10,7 @@ class Kiwoom(QAxWidget):
         ################################
         # event loop를 실행하기 위한 변수
         self.login_event_loop = QEventLoop() # 로그인 요청용 이벤트 루프
+        self.detail_account_info_event_loop = None # 예수금 요청용 이벤트 루프
         ################################
         
         ################################
@@ -19,6 +20,8 @@ class Kiwoom(QAxWidget):
         self.use_money = 0 # 실제 투자금
         self.use_money_percent = 0.5 # 예수금에서 사용할 비율
         self.output_deposit = 0 # 출력가능 금액
+        self.total_profit_loss_money = 0 # 총 평가손익금액
+        self.total_profit_loss_rate = 0.0 # 총 수익률(%)
         ################################
         
         ################################
@@ -33,6 +36,7 @@ class Kiwoom(QAxWidget):
         self.signal_login_commConnect() # 로그인 요청 함수
         self.get_account_info() # 계좌번호 가져오기
         self.detail_account_info() # 예수금 요청 시그널 포함
+        self.detail_account_mystock() # 계좌평가잔고내역 가져오기
         ################################
         
     def get_ocx_instance(self):
@@ -81,6 +85,29 @@ class Kiwoom(QAxWidget):
             print("예수금 : %s" % self.output_deposit)
             
             self.stop_screen_cancel(self.screen_my_info)
+        
+        elif sRQName == "계좌평가잔고내역요청":
+            total_buy_money = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, 0, "총매입금액")
+            self.total_buy_money = int(total_buy_money)
+            total_profit_loss_money = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, 0, "총평가손익금액")
+            self.total_profit_loss_money = int(total_profit_loss_money)
+            total_profit_loss_rate = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, 0, "총수익률(%)")
+            self.total_profit_loss_rate = float(total_profit_loss_rate)
             
+            print("계좌평가잔고내역요청 싱글데이터 : %s - %s - %s" % (total_buy_money, total_profit_loss_money, total_profit_loss_rate))
+            self.stop_screen_cancel(self.screen_my_info)
+            
+            self.detail_account_info_event_loop.exit()
+
     def stop_screen_cancel(self, sScrNo=None):
         self.dynamicCall("DisconnectRealData(QString)", sScrNo) # 스크린 번호 연결 끊기
+        
+    def detail_account_mystock(self, sPrevNext="0"):
+        self.dynamicCall("SetInputValue(QString, QString)", "계좌번호", self.account_num)
+        self.dynamicCall("SetInputValue(QString, QString)", "비밀번호", "0000")
+        self.dynamicCall("SetInputValue(QString, QString)", "비밀번호입력매체구분", "00")
+        self.dynamicCall("SetInputValue(QString, QString)", "조회구분", "1")
+        self.dynamicCall("CommRqData(QString, QString, int, QString)", "계좌평가잔고내역요청", "opw00018", sPrevNext, self.screen_my_info)
+        
+        self.detail_account_info_event_loop = QEventLoop()
+        self.detail_account_info_event_loop.exec_()
