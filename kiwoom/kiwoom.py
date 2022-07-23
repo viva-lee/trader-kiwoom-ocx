@@ -41,7 +41,9 @@ class Kiwoom(QAxWidget):
         
         self.detail_account_info() # 예수금 요청 시그널 포함
         self.detail_account_mystock() # 계좌평가잔고내역 가져오기
+        QTimer.singleShot(5000, self.not_concluded_account) # 5초 뒤 미체결 종목 가져오기 실행
         ################################
+        
         
     def get_ocx_instance(self):
         self.setControl("KHOPENAPI.KHOpenAPICtrl.1") # 레지스트리에 저장된 api 모듈 불러오기
