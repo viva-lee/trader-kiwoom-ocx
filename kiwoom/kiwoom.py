@@ -215,3 +215,10 @@ class Kiwoom(QAxWidget):
     def stop_screen_cancel(self, sScrNo=None):
         self.dynamicCall("DisconnectRealData(QString)", sScrNo) # 스크린 번호 연결 끊기
         
+    def get_code_list_by_market(self, market_code):
+        code_list = self.dynamicCall("GetCodeListByMarket(QString)", market_code)
+        code_list = code_list.split(";")[:-1]
+        return code_list
+    
+    def calculator_fnc(self):
+        code_list = self.get_code_list_by_market("10")
