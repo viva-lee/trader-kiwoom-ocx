@@ -1,6 +1,10 @@
+import enum
 from PyQt5.QAxContainer import *
 from PyQt5.QtCore import *
+from PyQt5.QtTest import *
 from config.errorCode import *
+
+
 
 class Kiwoom(QAxWidget):
     def __init__(self):
@@ -11,6 +15,7 @@ class Kiwoom(QAxWidget):
         # event loop를 실행하기 위한 변수
         self.login_event_loop = QEventLoop() # 로그인 요청용 이벤트 루프
         self.detail_account_info_event_loop = QEventLoop() # 예수금 요청용 이벤트 루프
+        self.calculator_event_loop = QEventLoop()
         ################################
         
         ################################
@@ -29,6 +34,7 @@ class Kiwoom(QAxWidget):
         ################################
         # 요청 스크린 번호
         self.screen_my_info = "2000" # 계좌 관련 스크린 번호
+        self.screen_calculation_stock = "4000" # 계산용 스크린 번호
         ################################
         
         ################################
@@ -211,7 +217,16 @@ class Kiwoom(QAxWidget):
                 self.not_account_stock_dict[order_no].update({"체결량": ok_quantity})
                 
                 print("미체결 종목 : %s" % self.not_account_stock_dict[order_no])
-
+        
+        elif sRQName == "주식일봉차트조회":
+            code = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, 0, "종목코드")
+            data = self.dynamicCall("GetCommDataEx(QString, QString)", sTrCode, sRQName)
+            
+            if sPrevNext == "2":
+                self.day_kiwoom_db(code=code, sPrevNext=sPrevNext)
+            else:
+                self.calculator_event_loop.exit()
+            
     def stop_screen_cancel(self, sScrNo=None):
         self.dynamicCall("DisconnectRealData(QString)", sScrNo) # 스크린 번호 연결 끊기
         
@@ -222,3 +237,25 @@ class Kiwoom(QAxWidget):
     
     def calculator_fnc(self):
         code_list = self.get_code_list_by_market("10")
+        
+        print("코스닥 개수 %s" % len(code_list))
+        
+        for idx, code in enumerate(code_list):
+            self.dynamicCall("DisconnectRealData(QString)", self.screen_calculation_stock)
+            # 스크린 연결 끊기
+            
+            print("%s / %s : KOSDAQ Stock Code : %s is updating..." % (idx + 1, len(code_list, code)))
+            self.day_kiwoom_db(code=code)
+            
+    def day_kiwoom_db(self, code=None, date=None, sPrevNext="0"):
+        QTest.qWait(3600)
+        
+        self.dynamicCall("SetInputValue(QString, QString)", "종목코드", code)
+        self.dynamicCall("SetInputValue(QString, QString)", "수정주가구분", "1")
+        
+        if date != None:
+            self.dynamicCall("SetInputValue(QString, QString)", "기준일자", date)
+            
+        self.dynamicCall("CommRqData(QString, QString, int, QString)", "주식일봉차트조회", "opt10081", sPrevNext, self.screen_calculation_stock)
+        
+        self.calculator_event_loop.exec_()
