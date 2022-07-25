@@ -1,24 +1,22 @@
-import enum
+import os
 from PyQt5.QAxContainer import *
 from PyQt5.QtCore import *
 from PyQt5.QtTest import *
 from config.errorCode import *
-
-
 
 class Kiwoom(QAxWidget):
     def __init__(self):
         super().__init__()
         print("Kiwoom() class start.")
         
-        ################################
         # event loop를 실행하기 위한 변수
         self.login_event_loop = QEventLoop() # 로그인 요청용 이벤트 루프
         self.detail_account_info_event_loop = QEventLoop() # 예수금 요청용 이벤트 루프
         self.calculator_event_loop = QEventLoop()
-        ################################
         
-        ################################
+        # 전체 종목 관리
+        self.all_stock_dict = {}
+        
         # 계좌 관련된 변수
         self.account_stock_dict = {}
         self.not_account_stock_dict = {}
@@ -29,20 +27,19 @@ class Kiwoom(QAxWidget):
         self.output_deposit = 0 # 출력가능 금액
         self.total_profit_loss_money = 0 # 총 평가손익금액
         self.total_profit_loss_rate = 0.0 # 총 수익률(%)
-        ################################
         
-        ################################
+        # 종목 정보
+        self.portfolio_stock_dict = {}
+        
         # 종목 분석
         self.calcul_data = []
-        ################################
         
-        ################################
         # 요청 스크린 번호
         self.screen_my_info = "2000" # 계좌 관련 스크린 번호
         self.screen_calculation_stock = "4000" # 계산용 스크린 번호
-        ################################
+        self.screen_real_stock = "5000" # 종목별 할당할 스크린 번호
+        self.screen_meme_stock = "6000" # 종목별 할당할 주문용 스크린 번호
         
-        ################################
         # 초기 세팅 함수들 바로 실행
         self.get_ocx_instance() # ocx 방식을 파이썬이 사용할 수 있게 변환해 주는 함수
         self.event_slots() # 키움과 연결하기 위한 시그널/슬롯 모음
@@ -53,7 +50,10 @@ class Kiwoom(QAxWidget):
         self.detail_account_info() # 예수금 요청 시그널 포함
         self.detail_account_mystock() # 계좌평가잔고내역 가져오기
         QTimer.singleShot(5000, self.not_concluded_account) # 5초 뒤 미체결 종목 가져오기 실행
-        ################################
+        
+        QTest.qWait(10000)
+        self.read_code()
+        self.screen_number_setting()
         
         
     def get_ocx_instance(self):
@@ -357,3 +357,72 @@ class Kiwoom(QAxWidget):
         self.dynamicCall("CommRqData(QString, QString, int, QString)", "주식일봉차트조회", "opt10081", sPrevNext, self.screen_calculation_stock)
         
         self.calculator_event_loop.exec_()
+        
+    def read_code(self):
+        if os.path.exists("files/condition_stock.txt"):
+            f = open("files/condition_stock.txt", "r", encoding="utf8")
+            
+            lines = f.readlines() # 파일에 있는 내용 읽기
+            for line in lines:
+                if line != "":
+                    ls = line.split("\t")
+                    
+                    stock_code = ls[0]
+                    stock_name = ls[1]
+                    stock_price = int(ls[2].split("\n")[0])
+                    stock_price = abs(stock_price)
+                    
+                    self.portfolio_stock_dict.update({stock_code: {"종목명": stock_name,
+                                                                   "현재가": stock_price}})
+            f.close()
+            
+    def merge_dict(self):
+        self.all_stock_dict.update({"계좌평가잔고내역": self.account_stock_dict})
+        self.all_stock_dict.update({"미체결종목": self.not_account_stock_dict})
+        self.all_stock_dict.update({"포트폴리오종목": self.portfolio_stock_dict})
+        
+    def screen_number_setting(self):
+        screen_overwrite = []
+        
+        # 계좌평가잔고내역에 있는 종목들
+        for code in self.account_stock_dict.keys():
+            if code not in screen_overwrite:
+                screen_overwrite.append(code)
+                
+        # 미체결에 있는 종목들
+        for order_number in self.not_account_stock_dict.keys():
+            code = self.not_account_stock_dict[order_number]["종목코드"]
+            
+            if code not in screen_overwrite:
+                screen_overwrite.append(code)
+                
+        # 포트폴리오에 있는 종목들
+        for code in self.portfolio_stock_dict.keys():
+            if code not in screen_overwrite:
+                screen_overwrite.append(code)
+                
+        # 스크린 번호 할당
+        cnt = 0
+        for code in screen_overwrite:
+            temp_screen = int(self.screen_real_stock)
+            meme_screen = int(self.screen_meme_stock)
+            
+            if (cnt % 50) == 0:
+                temp_screen += 1
+                self.screen_real_stock = str(temp_screen)
+            
+            if (cnt % 50) == 0:
+                meme_screen += 1
+                self.screen_meme_stock = str(meme_screen)
+                
+            if code in self.portfolio_stock_dict.keys():
+                self.portfolio_stock_dict[code].update({"스크린번호": str(self.screen_real_stock)})
+                self.portfolio_stock_dict[code].update({"주문용스크린번호": str(self.screen_real_stock)})
+                
+            elif code not in self.portfolio_stock_dict.keys():
+                self.portfolio_stock_dict.update({code: {"스크린번호": str(self.screen_real_stock),
+                                                         "주문용스크린번호": str(self.screen_meme_stock)}})
+                
+            cnt += 1
+            
+        print(self.portfolio_stock_dict)
