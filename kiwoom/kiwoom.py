@@ -153,7 +153,7 @@ class Kiwoom(QAxWidget):
                     self.account_stock_dict[code] = {}
                 
                 code_nm = code_nm.strip()
-                stock_quantity = int(stock_quantity())
+                stock_quantity = int(stock_quantity)
                 buy_price = int(buy_price.strip())
                 learn_rate = float(learn_rate.strip())
                 current_price = int(current_price.strip())
@@ -220,7 +220,10 @@ class Kiwoom(QAxWidget):
         
         elif sRQName == "주식일봉차트조회":
             code = self.dynamicCall("GetCommData(QString, QString, int, QString)", sTrCode, sRQName, 0, "종목코드")
-            data = self.dynamicCall("GetCommDataEx(QString, QString)", sTrCode, sRQName)
+            code = code.strip()
+            # data = self.dynamicCall("GetCommDataEx(QString, QString)", sTrCode, sRQName)
+            cnt = self.dynamicCall("GetRepeatCnt(QString, QString)", sTrCode, sRQName)
+            print("남은 일자 수 %s" % cnt)
             
             if sPrevNext == "2":
                 self.day_kiwoom_db(code=code, sPrevNext=sPrevNext)
