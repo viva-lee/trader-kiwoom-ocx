@@ -3,11 +3,14 @@ from PyQt5.QAxContainer import *
 from PyQt5.QtCore import *
 from PyQt5.QtTest import *
 from config.errorCode import *
+from config.kiwoomType import *
 
 class Kiwoom(QAxWidget):
     def __init__(self):
         super().__init__()
         print("Kiwoom() class start.")
+        
+        self.realType = RealType()
         
         # event loop를 실행하기 위한 변수
         self.login_event_loop = QEventLoop() # 로그인 요청용 이벤트 루프
@@ -39,11 +42,12 @@ class Kiwoom(QAxWidget):
         self.screen_calculation_stock = "4000" # 계산용 스크린 번호
         self.screen_real_stock = "5000" # 종목별 할당할 스크린 번호
         self.screen_meme_stock = "6000" # 종목별 할당할 주문용 스크린 번호
+        self.screen_start_stop_real = "1000" # 장 시작/종료 실시간 스크린 번호
         
         # 초기 세팅 함수들 바로 실행
         self.get_ocx_instance() # ocx 방식을 파이썬이 사용할 수 있게 변환해 주는 함수
         self.event_slots() # 키움과 연결하기 위한 시그널/슬롯 모음
-        
+        self.real_event_slot() # 실시간 이벤트 시그널/슬롯 연결
         self.signal_login_commConnect() # 로그인 요청 함수
         self.get_account_info() # 계좌번호 가져오기
         
@@ -55,6 +59,9 @@ class Kiwoom(QAxWidget):
         self.read_code()
         self.screen_number_setting()
         
+        QTest.qWait(5000)
+        self.dynamicCall("SetRealReg(QString, QString, QString, QString)", self.screen_start_stop_real, " ", self.realType.REALTYPE["장시작시간"]["장운영구분"], "0")
+        
         
     def get_ocx_instance(self):
         self.setControl("KHOPENAPI.KHOpenAPICtrl.1") # 레지스트리에 저장된 api 모듈 불러오기
@@ -62,6 +69,9 @@ class Kiwoom(QAxWidget):
     def event_slots(self):
         self.OnEventConnect.connect(self.login_slot) # 로그인 관련 이벤트, 로그인 요청의 결과값을 받을 함수를 지정
         self.OnReceiveTrData.connect(self.trdata_slot) # 트랜잭션 요청 관련 이벤트
+        
+    def real_event_slot(self):
+        self.OnReceiveRealData.connect(self.realdata_slot) # 실시간 이베트 연결
         
     def signal_login_commConnect(self):
         self.dynamicCall("CommConnect()") # 로그인 요청 시그널
@@ -426,3 +436,20 @@ class Kiwoom(QAxWidget):
             cnt += 1
             
         print(self.portfolio_stock_dict)
+        
+    def realdata_slot(self, sCode, sRealType, sRealData):
+        if sRealType == "장시작시간":
+            fid = self.realType.REALTYPE[sRealType]["장운영구분"]
+            value = self.dynamicCall("GetCommRealData(QString, int)", sCode, fid)
+            
+            if value == "0":
+                print("장 시작 전")
+                
+            elif value == "1":
+                print("장 시작")
+                
+            elif value == "2":
+                print("장 종료, 동시호가 거래 시작")
+            
+            elif value == "4":
+                print("3시 30분 장 종료")
