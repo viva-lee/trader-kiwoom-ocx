@@ -5,13 +5,17 @@ from PyQt5.QtCore import *
 from PyQt5.QtTest import *
 from config.errorCode import *
 from config.kiwoomType import *
+from config.log_class import *
 
 class Kiwoom(QAxWidget):
     def __init__(self):
         super().__init__()
-        print("Kiwoom() class start.")
+        # print("Kiwoom() class start.")
         
         self.realType = RealType()
+        self.logging = Logging()
+        
+        self.logging.logger.debug("Kiwoom() class start.")
         
         # event loop를 실행하기 위한 변수
         self.login_event_loop = QEventLoop() # 로그인 요청용 이벤트 루프
