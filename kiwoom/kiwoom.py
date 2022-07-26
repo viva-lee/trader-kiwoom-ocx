@@ -321,7 +321,7 @@ class Kiwoom(QAxWidget):
                             elif int(self.calcul_data[idx][7]) > moving_average_price_prev and idx > 20:
                                 print("120일치 이평선 위에 있는 구간 확인")
                                 price_top_moving = True
-                                prev_price = int(slef.calcul_data[idx][7])
+                                prev_price = int(self.calcul_data[idx][7])
                                 break
                             
                             idx += 1
