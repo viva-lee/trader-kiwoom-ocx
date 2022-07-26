@@ -76,6 +76,7 @@ class Kiwoom(QAxWidget):
         
     def real_event_slot(self):
         self.OnReceiveRealData.connect(self.realdata_slot) # 실시간 이베트 연결
+        self.OnReceiveChejanData.connect(self.chejan_slot) # 종목 주문체결 이벤트
         
     def signal_login_commConnect(self):
         self.dynamicCall("CommConnect()") # 로그인 요청 시그널
@@ -504,3 +505,59 @@ class Kiwoom(QAxWidget):
             self.portfolio_stock_dict[sCode].update({"고가": i})
             self.portfolio_stock_dict[sCode].update({"시가": j})
             self.portfolio_stock_dict[sCode].update({"저가": k})
+            
+            if sCode in self.account_stock_dict.keys() and sCode not in self.jango_dict.keys():
+                asd = self.account_stock_dict[sCode]
+                meme_rate = (b - asd["매입가"]) / asd["매입가"] * 100
+                
+                if asd["매매가능수량"] > 0 and (meme_rate > 5 or meme_rate < -5):
+                    order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)", ["신규매도", self.portfolio_stock_dict[sCode]["주문용스크린번호"], self.account_num, 2, sCode, asd["매매가능수량"], 0, self.realType.SENDTYPE["거래구분"]["시장가"], ""])
+                    
+                    if order_success == 0:
+                        print("매도주문 전달 성공")
+                        del self.account_stock_dict[sCode]
+                    else:
+                        print("매도주문 전달 실패")
+            
+            elif sCode in self.jango_dict.keys():
+                jd = self.jango_dict[sCode]
+                meme_rate = (b - jd["매입단가"]) / jd["매입단가"] * 100
+                
+                if jd["주문가능수량"] > 0 and (meme_rate > 5 or meme_rate < -5):
+                    order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)", ["신규매도", self.portfolio_stock_dict[sCode]["주문용스크린번호"], self.account_num, 2, sCode, jd["주문수량"], 0, self.realType.SENDTYPE["거래구분"]["시장가"], ""])
+                    
+                    if order_success == 0:
+                        print("매도주문 전달 성공")
+                    else:
+                        print("매도주문 전달 실패")
+            
+            elif d > 2.0 and sCode in self.jango_dict:
+                print("매수조건 성립 %s" % sCode)
+                
+                result = (self.use_money * 0.1) / e
+                quantity = int(result)
+                
+                order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)", ["신규매수", self.portfolio_stock_dict[sCode]["주문용스크린번호"], self.account_num, 1, sCode, quantity, e, self.realType.SENDTYPE["거래구분"]["지정가"], ""])
+                
+                if order_success == 0:
+                    print("매수주문 전달 성공")
+                else:
+                    print("매수주문 전달 실패")
+                    
+                not_meme_list = list(self.not_account_stock_dict)
+                for order_num in not_meme_list:
+                    code = self.not_account_stock_dict[order_num]["종목코드"]
+                    meme_price = self.not_account_stock_dict[order_num]["주문가격"]
+                    not_quantity = self.not_account_stock_dict[order_num]["미체결수량"]
+                    order_gubun = self.not_account_stock_dict[order_num]["주문구분"]
+                    
+                    if order_gubun == "매수" and not_quantity > 0 and e > meme_price:
+                        order_success = self.dynamicCall("SendOrder(QString, QString, QString, int, QString, int, int, QString, QString)", ["매수취소", self.portfolio_stock_dict[sCode]["주문용스크린번호"], self.account_num, 3, code, 0, 0, self.realType.SENDTYPE["거래구분"]["지정가"], order_num])
+                        
+                        if order_success == 0:
+                            print("매수취소 전달 성공")
+                        else:
+                            print("매수취소 전달 실패")
+                    
+                    elif not_quantity == 0:
+                        del self.not_account_stock_dict[order_num]
