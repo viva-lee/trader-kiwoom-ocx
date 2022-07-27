@@ -1,5 +1,5 @@
 import sys
-sys.path.append("C:/Projects/KiwoomTrader/")
+# sys.path.append("C:/Projects/KiwoomTrader/")
 
 from kiwoom.kiwoom import *
 from PyQt5.QtWidgets import *
